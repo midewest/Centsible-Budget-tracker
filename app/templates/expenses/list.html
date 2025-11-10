@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-receipt"></i> Expenses
+        </h2>
+        <a href="{{ url_for('expenses.add_expense') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Expense
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-container">
+        <form method="get" class="filters-form">
+            <div class="filter-group">
+                <label for="category">Category</label>
+                <select name="category" id="category" class="form-control">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if request.args.get('category')|int == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="from">From Date</label>
+                <input type="date" name="from" id="from" class="form-control"
+                       value="{{ request.args.get('from', '') }}">
+            </div>
+            
+            <div class="filter-group">
+                <label for="to">To Date</label>
+                <input type="date" name="to" id="to" class="form-control"
+                       value="{{ request.args.get('to', '') }}">
+            </div>
+            
+            <button type="submit" class="btn btn-secondary">
+                <i class="fas fa-filter"></i> Apply Filters
+            </button>
+            
+            <a href="{{ url_for('expenses.index') }}" class="btn btn-outline">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
+        </form>
+    </div>
+
+    <!-- Expenses Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses.items %}
+                <tr>
+                    <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <span class="badge category-badge"
+                              {% if expense.category.color %}
+                              style="--badge-rgb: {{ expense.category.color|hex_to_rgb }}"
+                              {% endif %}>
+                            <i class="fas {{ expense.category.icon or 'fa-tag' }}"></i>
+                            {{ expense.category.name }}
+                        </span>
+                    </td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ current_user.currency_symbol }}{{ "%.2f"|format(expense.amount) }}</td>
+                    <td>
+                        {% if expense.payment_method %}
+                        <span class="badge badge-success">
+                            <i class="fas fa-credit-card"></i>
+                            {{ expense.payment_method|replace('_', ' ')|title }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="table-actions">
+                            <a href="{{ url_for('expenses.edit_expense', id=expense.id) }}" 
+                               class="btn-icon" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('expenses.delete_expense', id=expense.id) }}" 
+                                  method="POST" class="delete-form"
+                                  onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                <button type="submit" class="btn-icon text-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-receipt fa-3x text-muted"></i>
+                            <p class="mt-2">No expenses found</p>
+                            <a href="{{ url_for('expenses.add_expense') }}" class="btn btn-primary mt-3">
+                                <i class="fas fa-plus"></i> Add Your First Expense
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if expenses.pages > 1 %}
+    <div class="pagination-container">
+        <nav class="pagination">
+            {% if expenses.has_prev %}
+            <a href="{{ url_for('expenses.index', page=expenses.prev_num, **request.args) }}"
+               class="pagination-item">
+                <i class="fas fa-chevron-left"></i> Previous
+            </a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Page {{ expenses.page }} of {{ expenses.pages }}
+            </span>
+            
+            {% if expenses.has_next %}
+            <a href="{{ url_for('expenses.index', page=expenses.next_num, **request.args) }}"
+               class="pagination-item">
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Category badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.875rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .category-badge {
+        --badge-color: var(--primary);
+        background: rgba(var(--badge-rgb), 0.1);
+        color: rgb(var(--badge-rgb));
+    }
+
+    .badge i {
+        font-size: 1rem;
+    }
+
+    .filters-container {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-50);
+    }
+    
+    .filters-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-icon {
+        padding: 0.5rem;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        color: var(--gray-600);
+    }
+    
+    .btn-icon:hover {
+        background: var(--gray-100);
+        color: var(--primary);
+    }
+    
+    .delete-form {
+        margin: 0;
+    }
+    
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem;
+        color: var(--gray-500);
+    }
+    
+    .pagination-container {
+        padding: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .pagination-item {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--gray-600);
+        transition: var(--transition-fast);
+    }
+    
+    .pagination-item:hover {
+        background: var(--gray-100);
+        color: var(--primary);
+    }
+    
+    .pagination-info {
+        color: var(--gray-500);
+    }
+    
+    /* Dark mode styles */
+    body.dark-mode .filters-container {
+        background: var(--dark-card);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .btn-icon:hover {
+        background: var(--gray-800);
+    }
+    
+    body.dark-mode .pagination-item:hover {
+        background: var(--gray-800);
+    }
+</style>
+{% endblock %}

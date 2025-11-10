@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-wallet"></i> Category Budget
+        </h2>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" class="budget-form">
+            {{ form.csrf_token }}
+            
+            <div class="form-group">
+                <div class="category-info">
+                    <span class="badge category-badge"
+                          {% if category.color %}
+                          style="--badge-rgb: {{ category.color|hex_to_rgb }}"
+                          {% endif %}>
+                        <i class="fas {{ category.icon or 'fa-tag' }}"></i>
+                        {{ category.name }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.budget_amount.label(class="form-label") }}
+                <div class="amount-input">
+                    <span class="currency-symbol">{{ current_user.currency_symbol }}</span>
+                    {{ form.budget_amount(class="form-control" + (" is-invalid" if form.budget_amount.errors else "")) }}
+                </div>
+                {% for error in form.budget_amount.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.alert_threshold.label(class="form-label") }}
+                <div class="threshold-input">
+                    {{ form.alert_threshold(class="form-control" + (" is-invalid" if form.alert_threshold.errors else "")) }}
+                    <span class="threshold-symbol">%</span>
+                </div>
+                {% for error in form.alert_threshold.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <small class="form-text text-muted">
+                    Alert me when spending reaches this percentage of budget
+                </small>
+            </div>
+
+            <div class="form-group">
+                {{ form.notes.label(class="form-label") }}
+                {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                {% for error in form.notes.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('budgets.index') }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+
+        <!-- Current Month Stats -->
+        <div class="budget-stats">
+            <h3>Current Month Stats</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Spent</div>
+                    <div class="stat-value">
+                        {{ current_user.currency_symbol }}{{ "%.2f"|format(category.current_month_spending) }}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Budget Progress</div>
+                    <div class="progress">
+                        {% set progress = category.budget_progress %}
+                        {% set bar_class = 'progress-bar-danger' if progress >= 100 else 
+                                         'progress-bar-warning' if progress >= category.alert_threshold else 
+                                         'progress-bar-success' %}
+                        <div class="progress-bar {{ bar_class }}" style="width: {{ progress }}%">
+                            {{ progress }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        padding: 2rem;
+    }
+
+    .category-info {
+        margin-bottom: 1.5rem;
+    }
+
+    .amount-input,
+    .threshold-input {
+        position: relative;
+    }
+
+    .currency-symbol,
+    .threshold-symbol {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-500);
+    }
+
+    .currency-symbol {
+        left: 1rem;
+    }
+
+    .threshold-symbol {
+        right: 1rem;
+    }
+
+    .amount-input .form-control {
+        padding-left: 2rem;
+    }
+
+    .threshold-input .form-control {
+        padding-right: 2rem;
+    }
+
+    .form-actions {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--gray-200);
+        display: flex;
+        gap: 1rem;
+    }
+
+    .budget-stats {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .budget-stats h3 {
+        margin-bottom: 1.5rem;
+        color: var(--gray-700);
+        font-size: 1.25rem;
+    }
+
+    /* Dark mode styles */
+    body.dark-mode .form-actions,
+    body.dark-mode .budget-stats {
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .budget-stats h3 {
+        color: var(--gray-300);
+    }
+
+    body.dark-mode .currency-symbol,
+    body.dark-mode .threshold-symbol {
+        color: var(--gray-400);
+    }
+</style>
+{% endblock %}

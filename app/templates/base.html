@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centsible - Premium Budget Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"
+</head>
+<body>
+    <div class="container">
+        <!-- Premium Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-piggy-bank"></i>
+                <div>
+                    <div>Centsible</div>
+                    <div class="tagline">Make Centsible Choices with Your Money</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle">
+                    <i class="fas fa-moon"></i> Dark Mode
+                </button>
+                {% if current_user.is_authenticated %}
+                <div class="user-profile">
+                    <div class="avatar">{{ current_user.username[0:2].upper() }}</div>
+                    <span>{{ current_user.username }}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+        
+        <!-- Modern Navigation -->
+        <div class="nav-container">
+            <nav class="nav">
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('main.index') }}" class="nav-item {{ 'active' if request.endpoint == 'main.index' }}">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="{{ url_for('expenses.index') }}" class="nav-item {{ 'active' if request.endpoint.startswith('expenses.') }}">
+                    <i class="fas fa-receipt"></i> Expenses
+                </a>
+                <a href="{{ url_for('budgets.index') }}" class="nav-item {{ 'active' if request.endpoint.startswith('budgets.') }}">
+                    <i class="fas fa-wallet"></i> Budget
+                </a>
+                <a href="{{ url_for('reports.index') }}" class="nav-item {{ 'active' if request.endpoint.startswith('reports.') }}">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-home"></i> Households
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-bullseye"></i> Goals
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-pie"></i> Reports
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card expense animate-in">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">Spent This Month</div>
+                    <div class="stat-value">$2,847.50</div>
+                    <div class="stat-change">
+                        <i class="fas fa-arrow-up"></i> 12% vs last month
+                    </div>
+                </div>
+                
+                <div class="stat-card income animate-in animate-delay-1">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">Income This Month</div>
+                    <div class="stat-value">$5,200.00</div>
+                    <div class="stat-change">
+                        <i class="fas fa-check-circle"></i> On track
+                    </div>
+                </div>
+                
+                <div class="stat-card balance animate-in animate-delay-2">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">Net Cash Flow</div>
+                    <div class="stat-value">$2,352.50</div>
+                    <div class="stat-change">
+                        <i class="fas fa-thumbs-up"></i> Great work!
+                    </div>
+                </div>
+                
+                <div class="stat-card debt animate-in animate-delay-3">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">Total Debt</div>
+                    <div class="stat-value">$8,450.00</div>
+                    <div class="stat-change">
+                        <i class="fas fa-arrow-down"></i> 5% decrease
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Insights -->
+            <div class="insights-container">
+                <div class="insight success">
+                    <div class="insight-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Great job!</div>
+                        <div class="insight-text">Your spending is down 15% from last month</div>
+                    </div>
+                </div>
+                
+                <div class="insight warning">
+                    <div class="insight-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Food & Dining Alert</div>
+                        <div class="insight-text">You've used 85% of your $800 dining budget</div>
+                    </div>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="insight animate-in {% if category == 'success' %}success{% elif category == 'danger' %}danger{% else %}warning{% endif %}">
+                            <div class="insight-icon">
+                                <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-times-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                            </div>
+                            <div class="insight-content">
+                                <div class="insight-title">{{ category|title }}</div>
+                                <div class="insight-text">{{ message }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.querySelector('.theme-toggle');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Load saved theme or use system preference
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
+                document.body.classList.add('dark-mode');
+                updateThemeToggle(true);
+            } else {
+                document.body.classList.remove('dark-mode');
+                updateThemeToggle(false);
+            }
+        }
+
+        // Update theme toggle button appearance
+        function updateThemeToggle(isDark) {
+            const icon = themeToggle.querySelector('i');
+            if (isDark) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            }
+        }
+
+        // Handle theme toggle click
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeToggle(isDark);
+        });
+
+        // Handle system theme changes
+        prefersDarkScheme.addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                if (e.matches) {
+                    document.body.classList.add('dark-mode');
+                    updateThemeToggle(true);
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    updateThemeToggle(false);
+                }
+            }
+        });
+
+        // Load theme on page load
+        loadTheme();
+    </script>
+            if (icon.classList.contains('fa-moon')) {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

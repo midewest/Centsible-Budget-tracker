@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Category Trends{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Category Spending Trends</h1>
+    
+    <!-- Category selector -->
+    <div class="mb-8">
+        <label for="category" class="block text-sm font-medium text-gray-700">Select Category</label>
+        <select id="category" name="category" onchange="updateCategory(this.value)"
+                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+            {% for category in categories %}
+            <option value="{{ category.id }}" {% if category.id == selected_category.id %}selected{% endif %}>
+                {{ category.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    {% if selected_category %}
+        <!-- Spending trends chart -->
+        <div class="mb-8">
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <canvas id="spendingTrendsChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-500">Average Monthly</h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">${{ "{:,.2f}".format(stats.average) }}</p>
+            </div>
+            
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-500">Maximum</h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">${{ "{:,.2f}".format(stats.maximum) }}</p>
+            </div>
+            
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-500">Minimum</h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">${{ "{:,.2f}".format(stats.minimum) }}</p>
+            </div>
+            
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-500">Current Month</h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">${{ "{:,.2f}".format(stats.current) }}</p>
+            </div>
+            
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-500">Monthly Budget</h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">
+                    {% if stats.budget %}
+                        ${{ "{:,.2f}".format(stats.budget) }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Monthly data table -->
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Month
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total Spent
+                        </th>
+                        {% if selected_category.budget_amount %}
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            vs Budget
+                        </th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for data in monthly_data %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ data.month }}/{{ data.year }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                            ${{ "{:,.2f}".format(data.total) }}
+                        </td>
+                        {% if selected_category.budget_amount %}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                            {% set variance = selected_category.budget_amount - data.total %}
+                            {% if variance >= 0 %}
+                                <span class="text-green-500">
+                                    ${{ "{:,.2f}".format(variance) }} under
+                                </span>
+                            {% else %}
+                                <span class="text-red-500">
+                                    ${{ "{:,.2f}".format(abs(variance)) }} over
+                                </span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+console.log('Starting trends.html script execution');
+function updateCategory(categoryId) {
+    console.log('updateCategory called with:', categoryId);
+    window.location.href = "{{ url_for('reports.category_trends') }}?category_id=" + categoryId;
+}
+
+{% if selected_category %}
+console.log('selected_category is defined:', {{ selected_category.id }});
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM content loaded, initializing chart');
+    const ctx = document.getElementById('spendingTrendsChart');
+    if (!ctx) {
+        console.error('Canvas element spendingTrendsChart not found');
+        return;
+    }
+    console.log('Canvas context obtained');
+
+    // Prepare chart data
+    const labels = [
+        {% for data in monthly_data|reverse %}
+        '{{ data.month }}/{{ data.year }}',
+        {% endfor %}
+    ];
+    const spendingData = [
+        {% for data in monthly_data|reverse %}
+        {{ data.total }},
+        {% endfor %}
+    ];
+
+    const datasets = [{
+        label: 'Monthly Spending',
+        data: spendingData,
+        fill: false,
+        borderColor: '#36A2EB',
+        tension: 0.1
+    }];
+
+    {% if selected_category.budget_amount %}
+    const budgetData = [
+        {% for data in monthly_data|reverse %}
+        {{ selected_category.budget_amount }},
+        {% endfor %}
+    ];
+    datasets.push({
+        label: 'Budget',
+        data: budgetData,
+        fill: false,
+        borderColor: '#FF6384',
+        borderDash: [5, 5],
+        tension: 0
+    });
+    {% endif %}
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    console.log('Chart initialized successfully');
+});
+{% else %}
+console.log('selected_category is not defined');
+{% endif %}
+</script>
+{% endblock %}

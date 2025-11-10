@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Expense Reports</h1>
+    
+    <!-- Export button -->
+    <div class="mb-8">
+        <a href="{{ url_for('reports.export_expenses') }}" 
+           class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Export Expenses to CSV
+        </a>
+    </div>
+    
+    <!-- Year-to-date spending by category -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Year-to-Date Spending by Category</h2>
+        <div class="bg-white shadow-lg rounded-lg p-6">
+            <canvas id="ytdChart" 
+                   data-labels="{{ [category.name for category, total in ytd_spending]|tojson }}"
+                   data-values="{{ [total for category, total in ytd_spending]|tojson }}"></canvas>
+        </div>
+    </div>
+    
+    <!-- Monthly spending trends -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Monthly Spending Trends</h2>
+        <div class="bg-white shadow-lg rounded-lg p-6">
+            <canvas id="monthlyTrendsChart"
+                   data-labels="{{ [(total.month|string) + '/' + (now.year|string) for total in monthly_totals]|tojson }}"
+                   data-values="{{ [total.total for total in monthly_totals]|tojson }}"></canvas>
+        </div>
+    </div>
+    
+    <!-- Category trends -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Category Trends</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for trend in trends %}
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-2">{{ trend.category.name }}</h3>
+                <p class="text-2xl mb-2">${{ "{:,.2f}".format(trend.total) }}</p>
+                <div class="flex items-center">
+                    <span class="mr-2">Trend:</span>
+                    {% if trend.trend > 0 %}
+                        <span class="text-red-500">↑ {{ trend.trend }}%</span>
+                    {% elif trend.trend < 0 %}
+                        <span class="text-green-500">↓ {{ abs(trend.trend) }}%</span>
+                    {% else %}
+                        <span class="text-gray-500">−</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Budget vs Actual -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Budget vs Actual (Current Month)</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white shadow-lg rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Budget
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actual
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Variance
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for item in budget_vs_actual %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {{ item.category.name }}
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            ${{ "{:,.2f}".format(item.budget or 0) }}
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            ${{ "{:,.2f}".format(item.actual or 0) }}
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            {% if item.variance is not none %}
+                                {% if item.variance >= 0 %}
+                                    <span class="text-green-500">
+                                {% else %}
+                                    <span class="text-red-500">
+                                {% endif %}
+                                ${{ "{:,.2f}".format(abs(item.variance)) }}
+                                {% if item.variance >= 0 %}
+                                    under
+                                {% else %}
+                                    over
+                                {% endif %}
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize both charts
+    function initializeCharts() {
+        // YTD Spending Chart
+        const ytdChart = document.getElementById('ytdChart');
+        const ytdCtx = ytdChart.getContext('2d');
+        const ytdLabels = JSON.parse(ytdChart.dataset.labels);
+        const ytdValues = JSON.parse(ytdChart.dataset.values);
+        
+        new Chart(ytdCtx, {
+            type: 'pie',
+            data: {
+                labels: ytdLabels,
+                datasets: [{
+                    data: ytdValues,
+                    backgroundColor: [
+                        '#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF',
+                        '#FF9F40','#FF6384','#36A2EB','#FFCE56','#4BC0C0'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+
+        // Monthly Trends Chart
+        const monthlyChart = document.getElementById('monthlyTrendsChart');
+        const monthlyCtx = monthlyChart.getContext('2d');
+        const monthlyLabels = JSON.parse(monthlyChart.dataset.labels);
+        const monthlyValues = JSON.parse(monthlyChart.dataset.values);
+
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'Monthly Total',
+                    data: monthlyValues,
+                fill: false,
+                borderColor: '#36A2EB',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '$' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-cog"></i> Budget Settings
+        </h2>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" class="budget-form">
+            {{ form.csrf_token }}
+            
+            <div class="form-group">
+                {{ form.monthly_income.label(class="form-label") }}
+                <div class="amount-input">
+                    <span class="currency-symbol">{{ current_user.currency_symbol }}</span>
+                    {{ form.monthly_income(class="form-control" + (" is-invalid" if form.monthly_income.errors else "")) }}
+                </div>
+                {% for error in form.monthly_income.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <small class="form-text text-muted">
+                    Your monthly take-home income after taxes
+                </small>
+            </div>
+
+            <div class="form-group">
+                {{ form.total_budget.label(class="form-label") }}
+                <div class="amount-input">
+                    <span class="currency-symbol">{{ current_user.currency_symbol }}</span>
+                    {{ form.total_budget(class="form-control" + (" is-invalid" if form.total_budget.errors else "")) }}
+                </div>
+                {% for error in form.total_budget.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <small class="form-text text-muted">
+                    Your total planned spending for the month
+                </small>
+            </div>
+
+            <div class="budget-info">
+                {% if current_user.monthly_income and current_user.total_budget %}
+                {% set savings_rate = ((current_user.monthly_income - current_user.total_budget) / current_user.monthly_income * 100)|round|int %}
+                <div class="insight {{ 'success' if savings_rate >= 20 else 'warning' }}">
+                    <div class="insight-icon">
+                        <i class="fas {{ 'fa-piggy-bank' if savings_rate >= 20 else 'fa-exclamation-triangle' }}"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">
+                            {% if savings_rate >= 20 %}
+                            Great savings plan!
+                            {% else %}
+                            Consider increasing savings
+                            {% endif %}
+                        </div>
+                        <div class="insight-text">
+                            Your planned savings rate is {{ savings_rate }}%
+                            {% if savings_rate < 20 %}
+                            (recommended: at least 20%)
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('budgets.index') }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        padding: 2rem;
+    }
+
+    .amount-input {
+        position: relative;
+    }
+
+    .currency-symbol {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-500);
+    }
+
+    .amount-input .form-control {
+        padding-left: 2rem;
+    }
+
+    .form-actions {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--gray-200);
+        display: flex;
+        gap: 1rem;
+    }
+
+    .budget-info {
+        margin: 2rem 0;
+    }
+
+    /* Dark mode styles */
+    body.dark-mode .form-actions {
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .currency-symbol {
+        color: var(--gray-400);
+    }
+</style>
+{% endblock %}
