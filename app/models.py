@@ -18,7 +18,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     theme_preference = db.Column(db.String(10), default='light')
-    currency_symbol = db.Column(db.String(5), default='$')
+    currency_symbol = db.Column(db.String(5), default='₦')
     monthly_income = db.Column(db.Numeric(10, 2), default=0)
     total_budget = db.Column(db.Numeric(10, 2), default=0)
     

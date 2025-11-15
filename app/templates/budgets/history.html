@@ -1,99 +1,178 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="card">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-history"></i> Budget History:
-            <span class="badge category-badge"
-                  {% if category.color %}
-                  style="--badge-rgb: {{ category.color|hex_to_rgb }}"
-                  {% endif %}>
-                <i class="fas {{ category.icon or 'fa-tag' }}"></i>
-                {{ category.name }}
+  <div class="card-header">
+    <h2 class="card-title">
+      <i class="fas fa-history"></i> Budget History:
+      <span
+        class="badge category-badge"
+        {%
+        if
+        category.color
+        %}
+        style="--badge-rgb: {{ category.color|hex_to_rgb }}"
+        {%
+        endif
+        %}
+      >
+        <i class="fas {{ category.icon or 'fa-tag' }}"></i>
+        {{ category.name }}
+      </span>
+    </h2>
+  </div>
+
+  <div class="history-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Period</th>
+          <th>Budget</th>
+          <th>Spent</th>
+          <th>Usage</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for budget in history %} {% set month_name = budget.month|month_name
+        %}
+        <tr>
+          <td>{{ month_name }} {{ budget.year }}</td>
+          <td>
+            {{ current_user.currency_symbol }}{{ "%.2f"|format(budget.amount) }}
+          </td>
+          {% set spending = current_user.get_category_spending(category.id,
+          budget.year, budget.month) %}
+          <td>
+            {{ current_user.currency_symbol }}{{ "%.2f"|format(spending) }}
+          </td>
+          <td>
+            <div class="progress">
+              {% set progress = (((spending / budget.amount) * 100)|round|int)
+              if budget.amount and budget.amount > 0 else 0 %} {% set bar_class
+              = 'progress-bar-danger' if progress >= 100 else
+              'progress-bar-warning' if progress >= category.alert_threshold
+              else 'progress-bar-success' %}
+              <div
+                class="progress-bar {{ bar_class }}"
+                data-width="{{ progress }}"
+              >
+                {{ progress }}%
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if budget.notes %}
+            <span class="budget-note" title="{{ budget.notes }}">
+              <i class="fas fa-sticky-note"></i>
+              {{ budget.notes|truncate(30) }}
             </span>
-        </h2>
-    </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    <div class="history-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Period</th>
-                    <th>Budget</th>
-                    <th>Spent</th>
-                    <th>Usage</th>
-                    <th>Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for budget in history %}
-                {% set month_name = budget.month|month_name %}
-                <tr>
-                    <td>{{ month_name }} {{ budget.year }}</td>
-                    <td>{{ current_user.currency_symbol }}{{ "%.2f"|format(budget.amount) }}</td>
-                    {% set spending = current_user.get_category_spending(category.id, budget.year, budget.month) %}
-                    <td>{{ current_user.currency_symbol }}{{ "%.2f"|format(spending) }}</td>
-                    <td>
-                        <div class="progress">
-                            {% set progress = (((spending / budget.amount) * 100)|round|int) if budget.amount and budget.amount > 0 else 0 %}
-                            {% set bar_class = 'progress-bar-danger' if progress >= 100 else 
-                                             'progress-bar-warning' if progress >= category.alert_threshold else 
-                                             'progress-bar-success' %}
-                            <div class="progress-bar {{ bar_class }}" style="width: {{ progress }}%">
-                                {{ progress }}%
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        {% if budget.notes %}
-                        <span class="budget-note" title="{{ budget.notes }}">
-                            <i class="fas fa-sticky-note"></i>
-                            {{ budget.notes|truncate(30) }}
-                        </span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div class="card-footer">
-        <a href="{{ url_for('budgets.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Budgets
-        </a>
-    </div>
+  <div class="card-footer">
+    <a href="{{ url_for('budgets.index') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Budgets
+    </a>
+  </div>
 </div>
+{% endblock %} {% block extra_css %}
+<style>
+  .history-container {
+    padding: 1.5rem;
+  }
+
+  .budget-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+  }
+
+  .budget-note i {
+    color: var(--warning);
+  }
+
+  /* Enhanced progress bar styles to match dashboard */
+  .progress {
+    height: 0.75rem;
+    background-color: var(--gray-200);
+    border-radius: 0.375rem;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .progress-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .progress-bar-success {
+    background: var(--gradient-primary);
+  }
+
+  .progress-bar-warning {
+    background: linear-gradient(90deg, var(--warning) 0%, #d97706 100%);
+  }
+
+  .progress-bar-danger {
+    background: linear-gradient(90deg, var(--danger) 0%, #dc2626 100%);
+  }
+
+  /* Dark mode styles */
+  body.dark-mode .budget-note {
+    color: var(--gray-400);
+  }
+
+  body.dark-mode .progress-bar-container {
+    background: var(--gray-800);
+  }
+</style>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-    .history-container {
-        padding: 1.5rem;
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.progress-bar').forEach(bar => {
+    const width = bar.getAttribute('data-width');
+    if (width) {
+      bar.style.width = `${width}%`;
     }
-
-    .budget-note {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--gray-600);
-        font-size: 0.875rem;
-    }
-
-    .budget-note i {
-        color: var(--warning);
-    }
-
-    /* Progress bar styles are now in components/progress.css */
-
-    /* Dark mode styles */
-    body.dark-mode .budget-note {
-        color: var(--gray-400);
-    }
-
-    body.dark-mode .progress-bar-container {
-        background: var(--gray-800);
-    }
-</style>
+  });
+});
+</script>
 {% endblock %}

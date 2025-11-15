@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+    {% extends 'base.html' %}
 
 {% block title %}Reports Dashboard{% endblock %}
 
@@ -18,9 +18,9 @@
     <div class="mb-8">
         <h2 class="text-2xl font-bold mb-4">Year-to-Date Spending by Category</h2>
         <div class="bg-white shadow-lg rounded-lg p-6">
-            <canvas id="ytdChart" 
-                   data-labels="{{ [category.name for category, total in ytd_spending]|tojson }}"
-                   data-values="{{ [total for category, total in ytd_spending]|tojson }}"></canvas>
+            <canvas id="ytdChart"
+                   data-labels="{{ ytd_spending|map(attribute='0')|map(attribute='name')|list|tojson }}"
+                   data-values="{{ ytd_spending|map(attribute='1')|list|tojson }}"></canvas>
         </div>
     </div>
     
@@ -29,27 +29,31 @@
         <h2 class="text-2xl font-bold mb-4">Monthly Spending Trends</h2>
         <div class="bg-white shadow-lg rounded-lg p-6">
             <canvas id="monthlyTrendsChart"
-                   data-labels="{{ [(total.month|string) + '/' + (now.year|string) for total in monthly_totals]|tojson }}"
-                   data-values="{{ [total.total for total in monthly_totals]|tojson }}"></canvas>
+                   data-labels="{{ monthly_totals|map(attribute='month')|map('string')|map('add', '/')|map('add', now.year|string)|list|tojson }}"
+                   data-values="{{ monthly_totals|map(attribute='total')|list|tojson }}"></canvas>
         </div>
     </div>
     
     <!-- Category trends -->
     <div class="mb-8">
         <h2 class="text-2xl font-bold mb-4">Category Trends</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="stats-grid">
             {% for trend in trends %}
-            <div class="bg-white shadow-lg rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">{{ trend.category.name }}</h3>
-                <p class="text-2xl mb-2">${{ "{:,.2f}".format(trend.total) }}</p>
-                <div class="flex items-center">
-                    <span class="mr-2">Trend:</span>
+            <div class="stat-card trend">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas {{ trend.category.icon or 'fa-chart-line' }}"></i>
+                    </div>
+                </div>
+                <div class="stat-label">{{ trend.category.name }}</div>
+                <div class="stat-value">{{ current_user.currency_symbol }}{{ "{:,.2f}".format(trend.total) }}</div>
+                <div class="stat-change">
                     {% if trend.trend > 0 %}
-                        <span class="text-red-500">↑ {{ trend.trend }}%</span>
+                        <span class="text-danger">↑ {{ trend.trend }}%</span>
                     {% elif trend.trend < 0 %}
-                        <span class="text-green-500">↓ {{ abs(trend.trend) }}%</span>
+                        <span class="text-success">↓ {{ abs(trend.trend) }}%</span>
                     {% else %}
-                        <span class="text-gray-500">−</span>
+                        <span class="text-muted">−</span>
                     {% endif %}
                 </div>
             </div>
@@ -118,80 +122,198 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize both charts
     function initializeCharts() {
         // YTD Spending Chart
         const ytdChart = document.getElementById('ytdChart');
-        const ytdCtx = ytdChart.getContext('2d');
-        const ytdLabels = JSON.parse(ytdChart.dataset.labels);
-        const ytdValues = JSON.parse(ytdChart.dataset.values);
-        
-        new Chart(ytdCtx, {
-            type: 'pie',
-            data: {
-                labels: ytdLabels,
-                datasets: [{
-                    data: ytdValues,
-                    backgroundColor: [
-                        '#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF',
-                        '#FF9F40','#FF6384','#36A2EB','#FFCE56','#4BC0C0'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
+        if (ytdChart) {
+            const ytdCtx = ytdChart.getContext('2d');
+            const ytdLabels = JSON.parse(ytdChart.dataset.labels || '[]');
+            const ytdValues = JSON.parse(ytdChart.dataset.values || '[]');
+
+            new Chart(ytdCtx, {
+                type: 'pie',
+                data: {
+                    labels: ytdLabels,
+                    datasets: [{
+                        data: ytdValues,
+                        backgroundColor: [
+                            '#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF',
+                            '#FF9F40','#FF6384','#36A2EB','#FFCE56','#4BC0C0'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // Monthly Trends Chart
         const monthlyChart = document.getElementById('monthlyTrendsChart');
-        const monthlyCtx = monthlyChart.getContext('2d');
-        const monthlyLabels = JSON.parse(monthlyChart.dataset.labels);
-        const monthlyValues = JSON.parse(monthlyChart.dataset.values);
+        if (monthlyChart) {
+            const monthlyCtx = monthlyChart.getContext('2d');
+            const monthlyLabels = JSON.parse(monthlyChart.dataset.labels || '[]');
+            const monthlyValues = JSON.parse(monthlyChart.dataset.values || '[]');
 
-        new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: monthlyLabels,
-                datasets: [{
-                    label: 'Monthly Total',
-                    data: monthlyValues,
-                fill: false,
-                borderColor: '#36A2EB',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
+            new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [{
+                        label: 'Monthly Total',
+                        data: monthlyValues,
+                        fill: false,
+                        borderColor: '#36A2EB',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '{{ current_user.currency_symbol }}' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '{{ current_user.currency_symbol }}' + context.raw.toLocaleString();
+                                }
+                            }
                         }
                     }
                 }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return '$' + context.raw.toLocaleString();
-                        }
-                    }
-                }
-            }
+            });
         }
-    });
+    }
+
+    initializeCharts();
 });
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Stats Grid and Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+    }
+
+    .stat-card.trend::before {
+        background: linear-gradient(90deg, var(--secondary) 0%, #8b5cf6 100%);
+    }
+
+    .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        background: linear-gradient(135deg, var(--secondary) 0%, #8b5cf6 100%);
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--gray-900);
+        line-height: 1;
+    }
+
+    .stat-change {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    .stat-card.trend .stat-change {
+        color: var(--secondary);
+    }
+
+    /* Dark mode styles */
+    body.dark-mode .stat-card {
+        background: var(--dark-card);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .stat-label {
+        color: var(--gray-400);
+    }
+
+    body.dark-mode .stat-value {
+        color: var(--gray-100);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
 {% endblock %}

@@ -76,7 +76,7 @@ def index():
     # Quick add expense form
     quick_form = QuickExpenseForm()
     quick_form.category_id.choices = [
-        (c.id, c.name) for c in current_user.categories.all()
+        (c.id, c.name) for c in current_user.categories.filter_by(is_active=True).all()
     ]
     
     # Prepare chart data

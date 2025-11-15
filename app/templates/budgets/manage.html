@@ -1,263 +1,499 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="card">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-wallet"></i> Budget Management
-        </h2>
-        <a href="{{ url_for('budgets.budget_settings') }}" class="btn btn-primary">
-            <i class="fas fa-cog"></i> Budget Settings
-        </a>
-    </div>
+  <div class="card-header">
+    <h2 class="card-title"><i class="fas fa-wallet"></i> Budget Management</h2>
+    <a href="{{ url_for('budgets.budget_settings') }}" class="btn btn-primary">
+      <i class="fas fa-cog"></i> Budget Settings
+    </a>
+  </div>
 
-    <!-- Budget Alerts -->
-    {% if alerts %}
-    <div class="alerts-container">
-        {% for alert in alerts %}
-        <div class="alert alert-warning" role="alert">
-            <div class="alert-content">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>{{ alert.message }}</span>
-            </div>
-            <button class="alert-dismiss" data-alert-id="{{ alert.id }}">
-                <i class="fas fa-times"></i>
-            </button>
+  <!-- Budget Alerts -->
+  {% if alerts %}
+  <div class="alerts-container">
+    {% for alert in alerts %}
+    <div class="alert alert-warning" role="alert">
+      <div class="alert-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ alert.message }}</span>
+      </div>
+      <button class="alert-dismiss" data-alert-id="{{ alert.id }}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {% endfor %}
+    <button id="markAllRead" class="btn btn-secondary">
+      <i class="fas fa-check-double"></i> Mark All Read
+    </button>
+  </div>
+  {% endif %}
+
+  <!-- Budget Overview -->
+  <div class="budget-overview">
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-header">
+          <div class="stat-icon">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
         </div>
+        <div class="stat-label">Monthly Income</div>
+        <div class="stat-value">
+          {{ current_user.currency_symbol }}{{
+          "%.2f"|format(current_user.monthly_income or 0) }}
+        </div>
+        <div class="stat-change">
+          {% if current_user.monthly_income and current_user.monthly_income > 0 %}
+          <i class="fas fa-check-circle"></i> Income configured
+          {% else %}
+          <i class="fas fa-exclamation-circle"></i> No income set
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="stat-card expense">
+        <div class="stat-header">
+          <div class="stat-icon">
+            <i class="fas fa-chart-pie"></i>
+          </div>
+        </div>
+        <div class="stat-label">Total Budget</div>
+        <div class="stat-value">
+          {{ current_user.currency_symbol }}{{
+          "%.2f"|format(current_user.total_budget or 0) }}
+        </div>
+        <div class="stat-change">
+          {% if current_user.total_budget and current_user.total_budget > 0 %}
+          <i class="fas fa-chart-pie"></i> {{ categories|length }} categories
+          {% else %}
+          <i class="fas fa-exclamation-circle"></i> No budgets set
+          {% endif %}
+        </div>
+      </div>
+
+      {% set total_spent = current_user.get_monthly_spending() %}
+      <div class="stat-card balance">
+        <div class="stat-header">
+          <div class="stat-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+        </div>
+        <div class="stat-label">Month-to-Date Spent</div>
+        <div class="stat-value">
+          {{ current_user.currency_symbol }}{{ "%.2f"|format(total_spent) }}
+        </div>
+        {% if current_user.total_budget and current_user.total_budget > 0 %}
+        {% set budget_used = (total_spent / current_user.total_budget * 100)|round|int %}
+        <div class="stat-change">
+          {% if budget_used <= 50 %}
+          <i class="fas fa-check-circle" style="color: var(--success);"></i>
+          {% elif budget_used <= 80 %}
+          <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+          {% else %}
+          <i class="fas fa-times-circle" style="color: var(--danger);"></i>
+          {% endif %}
+          {{ budget_used }}% of budget used
+        </div>
+        {% else %}
+        <div class="stat-change">
+          <i class="fas fa-info-circle"></i> No budget limit set
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Budgets -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Budget</th>
+          <th>Spent</th>
+          <th>Progress</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td>
+            <span
+              class="badge category-badge"
+              {%
+              if
+              category.color
+              %}
+              style="--badge-rgb: {{ category.color|hex_to_rgb }}"
+              {%
+              endif
+              %}
+            >
+              <i class="fas {{ category.icon or 'fa-tag' }}"></i>
+              {{ category.name }}
+            </span>
+          </td>
+          <td>
+            {{ current_user.currency_symbol }}{{
+            "%.2f"|format(category.budget_amount) }}
+          </td>
+          <td>
+            {{ current_user.currency_symbol }}{{
+            "%.2f"|format(category.current_month_spending) }}
+          </td>
+          <td>
+            <div class="progress">
+              {% set progress = category.budget_progress %} {% set bar_class =
+              'progress-bar-danger' if progress >= 100 else
+              'progress-bar-warning' if progress >= category.alert_threshold
+              else 'progress-bar-success' %}
+              <div
+                class="progress-bar {{ bar_class }}" data-width="{{ progress }}"
+              >
+                
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="table-actions">
+              <a
+                href="{{ url_for('budgets.edit_category_budget', id=category.id) }}"
+                class="btn-icon"
+                title="Edit Budget"
+              >
+                <i class="fas fa-edit"></i>
+              </a>
+              <a
+                href="{{ url_for('budgets.category_history', id=category.id) }}"
+                class="btn-icon"
+                title="View History"
+              >
+                <i class="fas fa-history"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
         {% endfor %}
-        <button id="markAllRead" class="btn btn-secondary">
-            <i class="fas fa-check-double"></i> Mark All Read
-        </button>
-    </div>
-    {% endif %}
-
-    <!-- Budget Overview -->
-    <div class="budget-overview">
-        <div class="stats-grid">
-            <div class="stat-card income">
-                <div class="stat-header">
-                    <div class="stat-icon">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                </div>
-                <div class="stat-label">Monthly Income</div>
-                <div class="stat-value">
-                    {{ current_user.currency_symbol }}{{ "%.2f"|format(current_user.monthly_income or 0) }}
-                </div>
-            </div>
-            
-            <div class="stat-card expense">
-                <div class="stat-header">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-pie"></i>
-                    </div>
-                </div>
-                <div class="stat-label">Total Budget</div>
-                <div class="stat-value">
-                    {{ current_user.currency_symbol }}{{ "%.2f"|format(current_user.total_budget or 0) }}
-                </div>
-            </div>
-            
-            {% set total_spent = current_user.get_monthly_spending() %}
-            <div class="stat-card balance">
-                <div class="stat-header">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                </div>
-                <div class="stat-label">Month-to-Date Spent</div>
-                <div class="stat-value">
-                    {{ current_user.currency_symbol }}{{ "%.2f"|format(total_spent) }}
-                </div>
-                {% if current_user.total_budget %}
-                <div class="stat-change">
-                    {% set budget_used = (total_spent / current_user.total_budget * 100)|round|int %}
-                    {{ budget_used }}% of total budget used
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Category Budgets -->
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Category</th>
-                    <th>Budget</th>
-                    <th>Spent</th>
-                    <th>Progress</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for category in categories %}
-                <tr>
-                    <td>
-                        <span class="badge category-badge"
-                              {% if category.color %}
-                              style="--badge-rgb: {{ category.color|hex_to_rgb }}"
-                              {% endif %}>
-                            <i class="fas {{ category.icon or 'fa-tag' }}"></i>
-                            {{ category.name }}
-                        </span>
-                    </td>
-                    <td>{{ current_user.currency_symbol }}{{ "%.2f"|format(category.budget_amount) }}</td>
-                    <td>{{ current_user.currency_symbol }}{{ "%.2f"|format(category.current_month_spending) }}</td>
-                    <td>
-                        <div class="progress">
-                            {% set progress = category.budget_progress %}
-                            {% set bar_class = 'progress-bar-danger' if progress >= 100 else 
-                                             'progress-bar-warning' if progress >= category.alert_threshold else 
-                                             'progress-bar-success' %}
-                            <div class="progress-bar {{ bar_class }}" style="width: {{ progress }}%">
-                                {{ progress }}%
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="table-actions">
-                            <a href="{{ url_for('budgets.edit_category_budget', id=category.id) }}" 
-                               class="btn-icon" title="Edit Budget">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{{ url_for('budgets.category_history', id=category.id) }}" 
-                               class="btn-icon" title="View History">
-                                <i class="fas fa-history"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+      </tbody>
+    </table>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
+{% endblock %} {% block extra_css %}
 <style>
-    .alerts-container {
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--gray-200);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+  .alerts-container {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 0;
+  }
+
+  .alert-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .alert-dismiss {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: var(--transition-fast);
+  }
+
+  .alert-dismiss:hover {
+    opacity: 1;
+  }
+
+  .budget-overview {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .progress-bar-container {
+    width: 100%;
+    height: 24px;
+    background: var(--gray-100);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: width 0.3s ease;
+  }
+
+  .progress-bar.success {
+    background: var(--success);
+  }
+
+  .progress-bar.warning {
+    background: var(--warning);
+  }
+
+  .progress-bar.danger {
+    background: var(--danger);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--gray-200);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card.income {
+    background: #f0fdf4;
+  }
+
+  .stat-card.expense {
+    background: #fef2f2;
+  }
+
+  .stat-card.balance {
+    background: #d6e3f3;
+  }
+
+  .stat-card.income::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  }
+
+  .stat-card.expense::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  }
+
+  .stat-card.balance::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+  }
+
+  .stat-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+  }
+
+  .stat-card.income .stat-icon {
+    background: linear-gradient(135deg, #10b981, #059669);
+  }
+
+  .stat-card.expense .stat-icon {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+  }
+
+  .stat-card.balance .stat-icon {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+  }
+
+  .stat-change {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .stat-change i {
+    font-size: 0.75rem;
+  }
+
+  .stat-card.income .stat-change {
+    color: var(--success);
+  }
+
+  .stat-card.expense .stat-change {
+    color: var(--warning);
+  }
+
+  .stat-card.balance .stat-change {
+    color: var(--info);
+  }
+
+  /* Dark mode styles */
+  body.dark-mode .alerts-container,
+  body.dark-mode .budget-overview {
+    border-color: var(--dark-border);
+  }
+
+  body.dark-mode .stat-card {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+  }
+
+  body.dark-mode .stat-label {
+    color: var(--gray-400);
+  }
+
+  body.dark-mode .stat-value {
+    color: var(--gray-100);
+  }
+
+  body.dark-mode .progress-bar-container {
+    background: var(--gray-800);
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
-    .alert {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem;
-        border-radius: 12px;
-        margin: 0;
+    .stat-card {
+      padding: 1.25rem;
     }
 
-    .alert-content {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
+    .stat-value {
+      font-size: 1.75rem;
     }
+    
+    .stat-change {
+      font-size: 0.8125rem;
+    }
+  }
 
-    .alert-dismiss {
-        background: none;
-        border: none;
-        padding: 0.5rem;
-        cursor: pointer;
-        opacity: 0.6;
-        transition: var(--transition-fast);
+  @media (max-width: 480px) {
+    .stat-value {
+      font-size: 1.5rem;
     }
-
-    .alert-dismiss:hover {
-        opacity: 1;
+    
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.125rem;
     }
-
-    .budget-overview {
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--gray-200);
-    }
-
-    .progress-bar-container {
-        width: 100%;
-        height: 24px;
-        background: var(--gray-100);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .progress-bar {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 0.875rem;
-        transition: width 0.3s ease;
-    }
-
-    .progress-bar.success {
-        background: var(--success);
-    }
-
-    .progress-bar.warning {
-        background: var(--warning);
-    }
-
-    /* Dark mode styles */
-    body.dark-mode .alerts-container,
-    body.dark-mode .budget-overview {
-        border-color: var(--dark-border);
-    }
-
-    body.dark-mode .progress-bar-container {
-        background: var(--gray-800);
-    }
+  }
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const markAllBtn = document.getElementById('markAllRead');
-        if (markAllBtn) {
-            markAllBtn.addEventListener('click', function() {
-                fetch('{{ url_for("budgets.mark_alerts_read") }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const alertsContainer = document.querySelector('.alerts-container');
-                        if (alertsContainer) {
-                            alertsContainer.remove();
-                        }
-                    }
-                });
-            });
-        }
+  document.addEventListener("DOMContentLoaded", function () {
+    const markAllBtn = document.getElementById("markAllRead");
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", function () {
+        fetch('{{ url_for("budgets.mark_alerts_read") }}', {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token() }}",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "success") {
+              const alertsContainer =
+                document.querySelector(".alerts-container");
+              if (alertsContainer) {
+                alertsContainer.remove();
+              }
+            }
+          });
+      });
+    }
 
-        // Individual alert dismissal
-        document.querySelectorAll('.alert-dismiss').forEach(button => {
-            button.addEventListener('click', function() {
-                const alert = this.closest('.alert');
-                if (alert) {
-                    alert.remove();
-                    
-                    // If no more alerts, remove the container
-                    const remainingAlerts = document.querySelectorAll('.alert');
-                    if (remainingAlerts.length === 0) {
-                        const container = document.querySelector('.alerts-container');
-                        if (container) {
-                            container.remove();
-                        }
-                    }
-                }
-            });
-        });
+    // Individual alert dismissal
+    document.querySelectorAll(".alert-dismiss").forEach((button) => {
+      button.addEventListener("click", function () {
+        const alert = this.closest(".alert");
+        if (alert) {
+          alert.remove();
+
+          // If no more alerts, remove the container
+          const remainingAlerts = document.querySelectorAll(".alert");
+          if (remainingAlerts.length === 0) {
+            const container = document.querySelector(".alerts-container");
+            if (container) {
+              container.remove();
+            }
+          }
+        }
+      });
     });
+  });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var bars = document.querySelectorAll('.progress-bar');
+    for (var i = 0; i < bars.length; i++) {
+        var bar = bars[i];
+        var width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    }
+});
 </script>
 {% endblock %}

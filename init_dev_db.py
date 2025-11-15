@@ -15,7 +15,7 @@ def init_dev_db():
             username='testuser',
             email='test@example.com',
             theme_preference='light',
-            currency_symbol='$',
+            currency_symbol='₦',
             monthly_income=Decimal('5000.00'),
             total_budget=Decimal('4000.00')
         )

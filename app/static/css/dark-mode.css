@@ -1,0 +1,193 @@
+/* ============================================================================
+   CENTSIBLE - DARK MODE STYLING
+   
+   FILE: app/static/css/dark-mode.css
+   
+   Beautiful dark theme with smooth transitions
+============================================================================ */
+
+body.dark-mode {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #e2e8f0;
+}
+
+/* Dark Mode: Navbar */
+body.dark-mode .navbar {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark Mode: Container */
+body.dark-mode .container {
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(20px);
+}
+
+/* Dark Mode: Cards */
+body.dark-mode .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .card-header {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    border-bottom-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark Mode: Forms */
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background: #1e293b;
+    border-color: #10b981;
+    color: #e2e8f0;
+}
+
+body.dark-mode .form-label {
+    color: #cbd5e1;
+}
+
+/* Dark Mode: Tables */
+body.dark-mode .table {
+    color: #e2e8f0;
+}
+
+body.dark-mode .table thead {
+    background: #0f172a;
+}
+
+body.dark-mode .table thead th {
+    color: #cbd5e1;
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .table tbody td {
+    border-bottom-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark-mode .table tbody tr:hover {
+    background: #334155;
+}
+
+/* Dark Mode: Buttons */
+body.dark-mode .btn-secondary {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .btn-secondary:hover {
+    background: #475569;
+    color: #f1f5f9;
+}
+
+/* Dark Mode: Alerts */
+body.dark-mode .alert-success {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(30, 41, 59, 0.8) 100%);
+    color: #6ee7b7;
+}
+
+body.dark-mode .alert-warning {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(30, 41, 59, 0.8) 100%);
+    color: #fcd34d;
+}
+
+body.dark-mode .alert-danger {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.2) 0%, rgba(30, 41, 59, 0.8) 100%);
+    color: #fca5a5;
+}
+
+body.dark-mode .alert-info {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(30, 41, 59, 0.8) 100%);
+    color: #93c5fd;
+}
+
+/* Dark Mode: Badges */
+body.dark-mode .bg-success {
+    background: rgba(16, 185, 129, 0.2) !important;
+    color: #6ee7b7 !important;
+}
+
+body.dark-mode .bg-warning {
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #fcd34d !important;
+}
+
+body.dark-mode .bg-danger {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #fca5a5 !important;
+}
+
+body.dark-mode .bg-secondary {
+    background: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+/* Dark Mode: Progress */
+body.dark-mode .progress {
+    background: #0f172a;
+}
+
+/* Dark Mode: Dropdown */
+body.dark-mode .dropdown-menu {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .dropdown-item {
+    color: #e2e8f0;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background: #334155;
+    color: #10b981;
+}
+
+/* Dark Mode: Nav Links */
+body.dark-mode .nav-link {
+    color: rgba(226, 232, 240, 0.9) !important;
+}
+
+body.dark-mode .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark Mode: Text Colors */
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+    color: #f1f5f9;
+}
+
+body.dark-mode .text-muted {
+    color: #94a3b8 !important;
+}
+
+/* Dark Mode: Scrollbar */
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-color: #0f172a;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #10b981;
+}

@@ -69,22 +69,44 @@
         <div class="budget-stats">
             <h3>Current Month Stats</h3>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Spent</div>
+                <div class="stat-card expense">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">Spent This Month</div>
                     <div class="stat-value">
                         {{ current_user.currency_symbol }}{{ "%.2f"|format(category.current_month_spending) }}
                     </div>
+                    {% if category.budget_amount %}
+                    <div class="stat-change">
+                        {% set remaining = category.budget_amount - category.current_month_spending %}
+                        {% if remaining > 0 %}
+                            <span class="text-success">{{ current_user.currency_symbol }}{{ "%.2f"|format(remaining) }} left</span>
+                        {% else %}
+                            <span class="text-danger">{{ current_user.currency_symbol }}{{ "%.2f"|format(abs(remaining)) }} over</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card balance">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                    </div>
                     <div class="stat-label">Budget Progress</div>
-                    <div class="progress">
+                    <div class="stat-value">
                         {% set progress = category.budget_progress %}
-                        {% set bar_class = 'progress-bar-danger' if progress >= 100 else 
-                                         'progress-bar-warning' if progress >= category.alert_threshold else 
+                        {{ "%.1f"|format(progress) }}%
+                    </div>
+                    <div class="progress" style="margin-top: 0.5rem;">
+                        {% set bar_class = 'progress-bar-danger' if progress >= 100 else
+                                         'progress-bar-warning' if progress >= category.alert_threshold else
                                          'progress-bar-success' %}
-                        <div class="progress-bar {{ bar_class }}" style="width: {{ progress }}%">
-                            {{ progress }}%
+                        <div class="progress-bar {{ bar_class }}" data-width="{{ progress }}">
                         </div>
                     </div>
                 </div>
@@ -94,45 +116,22 @@
 </div>
 {% endblock %}
 
+/* Replace this section in your file (Lines 86+) */
 {% block extra_css %}
 <style>
-    .form-container {
-        padding: 2rem;
-    }
-
-    .category-info {
-        margin-bottom: 1.5rem;
-    }
-
-    .amount-input,
-    .threshold-input {
-        position: relative;
-    }
-
-    .currency-symbol,
-    .threshold-symbol {
+    .form-container { padding: 2rem; }
+    .category-info { margin-bottom: 1.5rem; }
+    .amount-input, .threshold-input { position: relative; }
+    .currency-symbol, .threshold-symbol {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
         color: var(--gray-500);
     }
-
-    .currency-symbol {
-        left: 1rem;
-    }
-
-    .threshold-symbol {
-        right: 1rem;
-    }
-
-    .amount-input .form-control {
-        padding-left: 2rem;
-    }
-
-    .threshold-input .form-control {
-        padding-right: 2rem;
-    }
-
+    .currency-symbol { left: 1rem; }
+    .threshold-symbol { right: 1rem; }
+    .amount-input .form-control { padding-left: 2rem; }
+    .threshold-input .form-control { padding-right: 2rem; }
     .form-actions {
         margin-top: 2rem;
         padding-top: 2rem;
@@ -140,32 +139,155 @@
         display: flex;
         gap: 1rem;
     }
-
     .budget-stats {
         margin-top: 3rem;
         padding-top: 2rem;
         border-top: 1px solid var(--gray-200);
     }
-
     .budget-stats h3 {
         margin-bottom: 1.5rem;
         color: var(--gray-700);
         font-size: 1.25rem;
     }
+    /* Stats Grid and Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
 
-    /* Dark mode styles */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-primary);
+    }
+
+    .stat-card.expense::before {
+        background: linear-gradient(90deg, var(--danger) 0%, #dc2626 100%);
+    }
+
+    .stat-card.balance::before {
+        background: linear-gradient(90deg, var(--info) 0%, #2563eb 100%);
+    }
+
+    .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: white;
+    }
+
+    .stat-card.expense .stat-icon {
+        background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+    }
+
+    .stat-card.balance .stat-icon {
+        background: linear-gradient(135deg, var(--info) 0%, #2563eb 100%);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        line-height: 1;
+    }
+
+    .stat-change {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 0.25rem;
+    }
+
+    .stat-card.expense .stat-change {
+        color: var(--danger);
+    }
+
+    .stat-card.balance .stat-change {
+        color: var(--info);
+    }
+
+    /* Dark mode styles (FIXED) */
     body.dark-mode .form-actions,
-    body.dark-mode .budget-stats {
+    body.dark-mode .budget-stats { border-color: var(--dark-border); }
+    body.dark-mode .budget-stats h3 { color: var(--gray-300); }
+    body.dark-mode .currency-symbol,
+    body.dark-mode .threshold-symbol { color: var(--gray-400); }
+
+    body.dark-mode .stat-card {
+        background: var(--dark-card);
         border-color: var(--dark-border);
     }
 
-    body.dark-mode .budget-stats h3 {
-        color: var(--gray-300);
-    }
-
-    body.dark-mode .currency-symbol,
-    body.dark-mode .threshold-symbol {
+    body.dark-mode .stat-label {
         color: var(--gray-400);
     }
+
+    body.dark-mode .stat-value {
+        color: var(--gray-100);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.125rem;
+        }
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var bars = document.querySelectorAll('.progress-bar');
+    for (var i = 0; i < bars.length; i++) {
+        var bar = bars[i];
+        var width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    }
+});
+</script>
 {% endblock %}

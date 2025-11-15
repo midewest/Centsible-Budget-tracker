@@ -52,7 +52,7 @@ def test_user(app):
                 username='test_user',
                 email='test@example.com',
                 theme_preference='light',
-                currency_symbol='$',
+                currency_symbol='₦',
                 monthly_income=5000.00,
                 total_budget=4000.00
             )

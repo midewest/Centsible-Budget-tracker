@@ -122,7 +122,7 @@
     <div class="pagination-container">
         <nav class="pagination">
             {% if expenses.has_prev %}
-            <a href="{{ url_for('expenses.index', page=expenses.prev_num, **request.args) }}"
+            <a href="{{ url_for('expenses.index', page=expenses.prev_num) }}{% if request.args %}?{{ request.args|urlencode }}{% endif %}"
                class="pagination-item">
                 <i class="fas fa-chevron-left"></i> Previous
             </a>
@@ -133,7 +133,7 @@
             </span>
             
             {% if expenses.has_next %}
-            <a href="{{ url_for('expenses.index', page=expenses.next_num, **request.args) }}"
+            <a href="{{ url_for('expenses.index', page=expenses.next_num) }}{% if request.args %}?{{ request.args|urlencode }}{% endif %}"
                class="pagination-item">
                 Next <i class="fas fa-chevron-right"></i>
             </a>

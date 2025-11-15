@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from app.models import Expense, Category, BudgetAlert
 
-def test_dashboard_view(client, init_database, auth):
+def test_dashboard_view(client, sample_data, auth):
     """Test dashboard page loads with correct data."""
     auth.login()
     response = client.get('/')
@@ -15,7 +15,7 @@ def test_dashboard_view(client, init_database, auth):
     assert b'Quick Add Expense' in response.data
     assert b'Recent Expenses' in response.data
 
-def test_dashboard_stats(client, init_database, auth):
+def test_dashboard_stats(client, sample_data, auth):
     """Test dashboard statistics calculations."""
     auth.login()
     
@@ -49,12 +49,12 @@ def test_dashboard_stats(client, init_database, auth):
     assert response.status_code == 200
     
     # Verify monthly spending is shown
-    assert b'$50.00' in response.data
+    assert '₦50.00' in response.get_data(as_text=True)
     
     # Verify spending change calculation
     assert b'67%' in response.data  # (50-30)/30 * 100
 
-def test_quick_add_expense(client, init_database, auth):
+def test_quick_add_expense(client, sample_data, auth):
     """Test quick expense addition from dashboard."""
     auth.login()
     
@@ -76,7 +76,7 @@ def test_quick_add_expense(client, init_database, auth):
     assert expense.amount == Decimal('42.50')
     assert expense.category_id == category.id
 
-def test_alert_display(client, init_database, auth):
+def test_alert_display(client, sample_data, auth):
     """Test budget alerts show on dashboard."""
     auth.login()
     
@@ -98,7 +98,7 @@ def test_alert_display(client, init_database, auth):
     assert response.status_code == 200
     assert b'Test budget alert' in response.data
 
-def test_chart_data(client, init_database, auth):
+def test_chart_data(client, sample_data, auth):
     """Test spending chart data generation."""
     auth.login()
     
